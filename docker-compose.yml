@@ -1,0 +1,56 @@
+services:
+  # 1. The Application Service (PHP-FPM)
+  app:
+    build:
+      context: .
+      target: development
+    volumes:
+      - ./src:/var/www/html
+    networks:
+      - laravel
+
+  # 2. The Web Server Service (Nginx)
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "8080:80"
+    volumes:
+      - ./src:/var/www/html
+      - ./docker-compose/nginx:/etc/nginx/conf.d/
+    # Depend on the app service
+    depends_on:
+      - app
+    networks:
+      - laravel
+
+  # 3. The Database Service (MySQL)
+  db:
+    image: mysql:8.0
+    container_name: laravel_db
+    restart: unless-stopped
+    # Stop other containers from connecting to this DB
+    command: '--default-authentication-plugin=mysql_native_password'
+    # Environment variables for the database
+    # !! Feel free to change 'password' to a secure password !!
+    environment:
+      MYSQL_ROOT_PASSWORD: 'password'
+      MYSQL_DATABASE: 'laravel'
+      MYSQL_USER: 'laravel_user'
+      MYSQL_PASSWORD: 'password'
+    ports:
+      # Map port 33066 on your local machine (to avoid conflicts)
+      - "33066:3306"
+    volumes:
+      # This creates a 'named volume' to persist your database data
+      # even if you destroy the container
+      - db_data:/var/lib/mysql
+    networks:
+      - laravel
+
+networks:
+  laravel:
+    driver: bridge
+
+# Define the named volume for the database
+volumes:
+  db_data:
